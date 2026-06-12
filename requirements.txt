@@ -2,5 +2,3 @@ fastapi==0.115.*
 uvicorn[standard]==0.30.*
 httpx==0.27.*
 python-dotenv==1.0.*
-passlib==1.7.*
-bcrypt==

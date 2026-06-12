@@ -4,7 +4,9 @@
 Запуск:  uvicorn server:app --reload --port 8000
 """
 import os
+import hmac
 import json
+import hashlib
 import sqlite3
 import secrets
 import datetime as dt
@@ -15,8 +17,22 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Header
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from passlib.hash import bcrypt
 from pydantic import BaseModel
+
+
+def hash_password(password: str) -> str:
+    salt = secrets.token_hex(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 200_000).hex()
+    return f"{salt}${digest}"
+
+
+def verify_password(password: str, stored: str) -> bool:
+    try:
+        salt, digest = stored.split("$")
+    except ValueError:
+        return False
+    check = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 200_000).hex()
+    return hmac.compare_digest(check, digest)
 
 from prompts import (
     PSYCHOLOGISTS, ONBOARDING_QUESTIONS,
@@ -117,7 +133,7 @@ def register(body: Credentials):
             raise HTTPException(400, "Такой email уже зарегистрирован")
         c.execute(
             "INSERT INTO users (email, password_hash) VALUES (?,?)",
-            (email, bcrypt.hash(body.password)),
+            (email, hash_password(body.password)),
         )
     return login(body)
 
@@ -127,7 +143,7 @@ def login(body: Credentials):
     email = body.email.strip().lower()
     with db() as c:
         user = c.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
-        if not user or not bcrypt.verify(body.password, user["password_hash"]):
+        if not user or not verify_password(body.password, user["password_hash"]):
             raise HTTPException(400, "Неверный email или пароль")
         token = secrets.token_hex(24)
         c.execute(
