@@ -166,6 +166,7 @@ function setOrb(state) {
 
 async function startSessionWith(psyId) {
   closeModal('modal-psy');
+  unlockAudio(); // разблокировать звук, пока действует жест клика
   const psy = psychologists.find(p => p.id === psyId);
   show('view-session');
   document.getElementById('session-psy-name').textContent = psy.avatar + ' ' + psy.name + ' · ' + psy.specialty;
@@ -238,31 +239,58 @@ function initRecognition() {
   return r;
 }
 
-function toggleMic() {
-  if (recording) { stopMic(); return; }
+// Кнопка-рация: удерживайте, пока говорите; отпустили — отправилось
+const micBtn = document.getElementById('mic-btn');
+micBtn.addEventListener('pointerdown', startListening);
+micBtn.addEventListener('pointerup', stopListening);
+micBtn.addEventListener('pointercancel', stopListening);
+micBtn.addEventListener('pointerleave', stopListening);
+micBtn.addEventListener('contextmenu', e => e.preventDefault());
+
+function startListening(e) {
+  e.preventDefault();
+  if (recording || !currentSession) return;
   if (!recognition) recognition = initRecognition();
   if (!recognition) {
     setStatus('Браузер не поддерживает распознавание речи — используйте Chrome или Edge');
     return;
   }
-  stopAudio(); // не слушать себя
+  unlockAudio();   // разблокировать звук, пока действует жест нажатия
+  stopAudio();     // не слушать себя
   recording = true;
-  document.getElementById('mic-btn').classList.add('recording');
+  micBtn.classList.add('recording');
   setOrb('listening');
-  setStatus('Слушаю... Говорите');
-  recognition.start();
+  setStatus('Слушаю... Говорите и держите кнопку');
+  try { recognition.start(); } catch (err) {}
 }
+
+function stopListening() {
+  if (!recording) return;
+  recording = false;
+  micBtn.classList.remove('recording');
+  if (recognition) try { recognition.stop(); } catch (err) {} // stop() завершает распознавание и отдаёт результат в onresult
+}
+
 function stopMic() {
   recording = false;
-  document.getElementById('mic-btn').classList.remove('recording');
-  if (recognition) try { recognition.stop(); } catch (e) {}
+  micBtn.classList.remove('recording');
 }
 
 // ---------------- Озвучка (Edge-TTS на сервере, фолбэк — браузер) ----------------
-let currentAudio = null;
+// Один общий <audio>: «разблокирован» жестом пользователя, дальше Chrome разрешает
+// ему играть без ограничений автовоспроизведения.
+const player = new Audio();
+let audioUnlocked = false;
+const SILENT_WAV = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=';
+
+function unlockAudio() {
+  if (audioUnlocked) return;
+  player.src = SILENT_WAV;
+  player.play().then(() => { audioUnlocked = true; }).catch(() => {});
+}
 
 function stopAudio() {
-  if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+  try { player.pause(); } catch (e) {}
   speechSynthesis.cancel();
 }
 
@@ -270,34 +298,39 @@ async function speak(text) {
   stopAudio();
   setOrb('speaking');
   setStatus(currentSession ? currentSession.psy.name + ' говорит...' : '');
+  let played = false;
   try {
     const res = await fetch('/api/tts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
       body: JSON.stringify({ text, psychologist_id: currentSession ? currentSession.psy.id : '' }),
     });
-    if (!res.ok) throw new Error('tts');
-    const blob = await res.blob();
-    if (!blob.size) throw new Error('tts');
-    await new Promise((resolve) => {
-      currentAudio = new Audio(URL.createObjectURL(blob));
-      currentAudio.onended = resolve;
-      currentAudio.onerror = resolve;
-      currentAudio.play().catch(resolve);
-    });
-  } catch (e) {
+    if (res.ok) {
+      const blob = await res.blob();
+      if (blob.size > 200) {
+        await new Promise((resolve, reject) => {
+          player.src = URL.createObjectURL(blob);
+          player.onended = resolve;
+          player.onerror = resolve;
+          player.play().then(() => { played = true; }).catch(reject);
+        });
+        played = true;
+      }
+    }
+  } catch (e) { played = false; }
+  if (!played) {
     // Фолбэк: голос браузера
     await new Promise((resolve) => {
       const u = new SpeechSynthesisUtterance(text);
       u.lang = 'ru-RU';
-      u.rate = 0.95;
+      u.rate = 1.1;
       u.onend = resolve;
       u.onerror = resolve;
       speechSynthesis.speak(u);
     });
   }
   setOrb('');
-  setStatus('Нажмите на микрофон и говорите');
+  setStatus('Удерживайте микрофон и говорите');
 }
 
 // ---------------- История сессий ----------------

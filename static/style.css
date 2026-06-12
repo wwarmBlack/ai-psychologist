@@ -156,6 +156,7 @@ label { font-size: .88rem; color: var(--muted); display: block; margin-top: 4px;
 .mic {
   width: 56px; height: 56px; min-width: 56px; border-radius: 50%; border: none;
   font-size: 1.5rem; cursor: pointer; background: var(--accent-soft); transition: all .2s;
+  touch-action: none; user-select: none; -webkit-user-select: none;
 }
 .mic.big-mic { width: 76px; height: 76px; min-width: 76px; font-size: 2rem; box-shadow: var(--shadow); }
 .mic:hover { background: var(--accent); }
