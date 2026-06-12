@@ -216,64 +216,99 @@ async function closeSummary() {
   enterApp();
 }
 
-// ---------------- Распознавание речи (Web Speech API) ----------------
+// ---------------- Распознавание речи (Web Speech API, непрерывный режим) ----------------
+// Кнопка включает/выключает микрофон. Пока он включён — слушаем постоянно
+// (хоть несколько минут), реплики накапливаются в буфер. Chrome сам обрывает
+// распознавание каждые ~60 секунд — мы его незаметно перезапускаем, буфер цел.
+// Тишина 5 секунд (или выключение кнопки) — накопленное отправляется психологу.
+const SILENCE_LIMIT_MS = 5000;
+let micOn = false;
+let speechBuffer = '';
+let silenceTimer = null;
+
+const micBtn = document.getElementById('mic-btn');
+micBtn.addEventListener('click', toggleMic);
+
 function initRecognition() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) return null;
   const r = new SR();
   r.lang = 'ru-RU';
-  r.interimResults = false;
-  r.continuous = false;
+  r.interimResults = true;   // промежуточные результаты = знаем, что человек ещё говорит
+  r.continuous = true;
   r.onresult = e => {
-    const text = e.results[0][0].transcript;
-    stopMic();
-    sendVoice(text);
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) speechBuffer += e.results[i][0].transcript + ' ';
+    }
+    resetSilenceTimer(); // любая речь сбрасывает таймер тишины
   };
   r.onerror = e => {
-    stopMic();
-    setStatus(e.error === 'not-allowed'
-      ? 'Доступ к микрофону запрещён — разрешите его в настройках браузера'
-      : 'Не расслышал, попробуйте ещё раз');
+    if (e.error === 'not-allowed') {
+      micOff(false);
+      setStatus('Доступ к микрофону запрещён — разрешите его в настройках браузера');
+    }
+    // прочие ошибки (no-speech, network) игнорируем — onend перезапустит
   };
-  r.onend = () => stopMic();
+  r.onend = () => {
+    if (micOn) { try { r.start(); } catch (err) {} } // бесшовный перезапуск
+  };
   return r;
 }
 
-// Кнопка-рация: удерживайте, пока говорите; отпустили — отправилось
-const micBtn = document.getElementById('mic-btn');
-micBtn.addEventListener('pointerdown', startListening);
-micBtn.addEventListener('pointerup', stopListening);
-micBtn.addEventListener('pointercancel', stopListening);
-micBtn.addEventListener('pointerleave', stopListening);
-micBtn.addEventListener('contextmenu', e => e.preventDefault());
+function resetSilenceTimer() {
+  clearTimeout(silenceTimer);
+  silenceTimer = setTimeout(() => {
+    if (micOn && speechBuffer.trim()) sendBuffered(); // 5 сек тишины — отправляем
+  }, SILENCE_LIMIT_MS);
+}
 
-function startListening(e) {
-  e.preventDefault();
-  if (recording || !currentSession) return;
+function toggleMic() {
+  if (micOn) { micOff(true); return; }
+  if (!currentSession) return;
   if (!recognition) recognition = initRecognition();
   if (!recognition) {
     setStatus('Браузер не поддерживает распознавание речи — используйте Chrome или Edge');
     return;
   }
-  unlockAudio();   // разблокировать звук, пока действует жест нажатия
+  unlockAudio();   // разблокировать звук, пока действует жест клика
   stopAudio();     // не слушать себя
-  recording = true;
+  micOn = true;
+  speechBuffer = '';
   micBtn.classList.add('recording');
   setOrb('listening');
-  setStatus('Слушаю... Говорите и держите кнопку');
+  setStatus('Слушаю... Пауза 5 секунд или повторное нажатие — отправка');
   try { recognition.start(); } catch (err) {}
+  resetSilenceTimer();
 }
 
-function stopListening() {
-  if (!recording) return;
-  recording = false;
+function micOff(sendIfAny) {
+  micOn = false;
+  clearTimeout(silenceTimer);
   micBtn.classList.remove('recording');
-  if (recognition) try { recognition.stop(); } catch (err) {} // stop() завершает распознавание и отдаёт результат в onresult
+  if (recognition) try { recognition.stop(); } catch (err) {}
+  if (sendIfAny && speechBuffer.trim()) {
+    // дать распознаванию долю секунды дописать последнюю фразу
+    setTimeout(() => {
+      if (speechBuffer.trim()) sendBuffered();
+    }, 400);
+  } else if (!speechBuffer.trim()) {
+    setOrb('');
+    setStatus('Нажмите микрофон, чтобы говорить');
+  }
+}
+
+function sendBuffered() {
+  const text = speechBuffer.trim();
+  speechBuffer = '';
+  micOn = false;
+  clearTimeout(silenceTimer);
+  micBtn.classList.remove('recording');
+  if (recognition) try { recognition.stop(); } catch (err) {}
+  sendVoice(text);
 }
 
 function stopMic() {
-  recording = false;
-  micBtn.classList.remove('recording');
+  micOff(false);
 }
 
 // ---------------- Озвучка (Edge-TTS на сервере, фолбэк — браузер) ----------------
@@ -330,7 +365,7 @@ async function speak(text) {
     });
   }
   setOrb('');
-  setStatus('Удерживайте микрофон и говорите');
+  setStatus('Нажмите микрофон, чтобы говорить');
 }
 
 // ---------------- История сессий ----------------
