@@ -13,9 +13,10 @@ import datetime as dt
 from contextlib import contextmanager
 
 import httpx
+import edge_tts
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Header
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -378,6 +379,42 @@ def delete_booking(booking_id: int, authorization: str | None = Header(None)):
     with db() as c:
         c.execute("DELETE FROM bookings WHERE id=? AND user_id=?", (booking_id, u["id"]))
     return {"ok": True}
+
+
+# ----------------------------- ОЗВУЧКА (Edge-TTS) -----------------------------
+# Нейроголоса Microsoft: бесплатно, отличное качество для русского языка.
+# Каждому психологу — свой голос и манера речи (темп/высота).
+TTS_VOICES = {
+    "anna":    {"voice": "ru-RU-SvetlanaNeural", "rate": "-6%",  "pitch": "+0Hz"},
+    "mikhail": {"voice": "ru-RU-DmitryNeural",   "rate": "+8%",  "pitch": "+2Hz"},
+    "sofia":   {"voice": "ru-RU-SvetlanaNeural", "rate": "-2%",  "pitch": "+4Hz"},
+    "viktor":  {"voice": "ru-RU-DmitryNeural",   "rate": "-12%", "pitch": "-4Hz"},
+}
+DEFAULT_TTS = {"voice": "ru-RU-SvetlanaNeural", "rate": "+0%", "pitch": "+0Hz"}
+
+
+class TTSRequest(BaseModel):
+    text: str
+    psychologist_id: str = ""
+
+
+@app.post("/api/tts")
+async def tts(body: TTSRequest, authorization: str | None = Header(None)):
+    auth(authorization)
+    text = body.text.strip()[:4000]
+    if not text:
+        raise HTTPException(400, "Пустой текст")
+    cfg = TTS_VOICES.get(body.psychologist_id, DEFAULT_TTS)
+    communicate = edge_tts.Communicate(
+        text, cfg["voice"], rate=cfg["rate"], pitch=cfg["pitch"],
+    )
+
+    async def audio_stream():
+        async for chunk in communicate.stream():
+            if chunk["type"] == "audio":
+                yield chunk["data"]
+
+    return StreamingResponse(audio_stream(), media_type="audio/mpeg")
 
 
 # ----------------------------- БАЛАНС (демо) -----------------------------
