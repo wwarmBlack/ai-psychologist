@@ -157,58 +157,48 @@ function openPsyPicker() {
   document.getElementById('modal-psy').classList.remove('hidden');
 }
 
-// ---------------- Сессия ----------------
+// ---------------- Сессия (только голос) ----------------
+function setStatus(t) { document.getElementById('session-status').textContent = t; }
+function setOrb(state) {
+  const orb = document.getElementById('orb');
+  orb.className = 'orb' + (state ? ' ' + state : '');
+}
+
 async function startSessionWith(psyId) {
   closeModal('modal-psy');
   const psy = psychologists.find(p => p.id === psyId);
-  setStatus('Подключение к ' + psy.name + '...');
   show('view-session');
   document.getElementById('session-psy-name').textContent = psy.avatar + ' ' + psy.name + ' · ' + psy.specialty;
-  document.getElementById('chat').innerHTML = '';
+  document.getElementById('orb-avatar').textContent = psy.avatar;
+  setOrb('thinking');
+  setStatus('Подключение к ' + psy.name + '...');
   try {
     const data = await api('/session/start', 'POST', { psychologist_id: psyId });
     currentSession = { id: data.session_id, psy };
-    addMsg('ai', data.reply);
-    speak(data.reply, psy.voice_hint);
-    setStatus('Нажмите на микрофон и говорите');
+    await speak(data.reply);
   } catch (e) {
     alert(e.message);
     show('view-app');
   }
 }
 
-function addMsg(role, text) {
-  const chat = document.getElementById('chat');
-  const div = document.createElement('div');
-  div.className = 'msg ' + role;
-  div.textContent = text;
-  chat.appendChild(div);
-  chat.scrollTop = chat.scrollHeight;
-  return div;
-}
-function setStatus(t) { document.getElementById('session-status').textContent = t; }
-
-async function sendText(textOverride) {
-  const input = document.getElementById('chat-input');
-  const text = (textOverride || input.value).trim();
+async function sendVoice(text) {
   if (!text || !currentSession) return;
-  input.value = '';
-  addMsg('user', text);
-  const typing = addMsg('ai typing', currentSession.psy.name + ' думает...');
+  setOrb('thinking');
+  setStatus(currentSession.psy.name + ' думает...');
   try {
     const data = await api('/session/message', 'POST', { session_id: currentSession.id, text });
-    typing.remove();
-    addMsg('ai', data.reply);
-    speak(data.reply, currentSession.psy.voice_hint);
+    await speak(data.reply);
   } catch (e) {
-    typing.remove();
-    addMsg('ai', '⚠️ ' + e.message);
+    setOrb('');
+    setStatus('⚠️ ' + e.message);
   }
 }
 
 async function endSession() {
   if (!currentSession) { show('view-app'); return; }
-  stopMic(); speechSynthesis.cancel();
+  stopMic(); stopAudio();
+  setOrb('thinking');
   setStatus('Готовим резюме сессии...');
   let summary = '';
   try {
@@ -236,7 +226,7 @@ function initRecognition() {
   r.onresult = e => {
     const text = e.results[0][0].transcript;
     stopMic();
-    sendText(text);
+    sendVoice(text);
   };
   r.onerror = e => {
     stopMic();
@@ -252,12 +242,13 @@ function toggleMic() {
   if (recording) { stopMic(); return; }
   if (!recognition) recognition = initRecognition();
   if (!recognition) {
-    setStatus('Браузер не поддерживает распознавание речи — используйте Chrome/Edge или пишите текстом');
+    setStatus('Браузер не поддерживает распознавание речи — используйте Chrome или Edge');
     return;
   }
-  speechSynthesis.cancel(); // не слушать себя
+  stopAudio(); // не слушать себя
   recording = true;
   document.getElementById('mic-btn').classList.add('recording');
+  setOrb('listening');
   setStatus('Слушаю... Говорите');
   recognition.start();
 }
@@ -267,28 +258,46 @@ function stopMic() {
   if (recognition) try { recognition.stop(); } catch (e) {}
 }
 
-// ---------------- Озвучка (speechSynthesis) ----------------
-function loadVoices() { voices = speechSynthesis.getVoices(); }
-loadVoices();
-if (speechSynthesis.onvoiceschanged !== undefined) speechSynthesis.onvoiceschanged = loadVoices;
+// ---------------- Озвучка (Edge-TTS на сервере, фолбэк — браузер) ----------------
+let currentAudio = null;
 
-function pickVoice(genderHint) {
-  const ru = voices.filter(v => v.lang.toLowerCase().startsWith('ru'));
-  if (!ru.length) return null;
-  const femaleNames = ['svetlana', 'irina', 'dariya', 'ekaterina', 'female', 'женск'];
-  const maleNames = ['dmitry', 'pavel', 'maxim', 'male', 'мужск'];
-  const names = genderHint === 'male' ? maleNames : femaleNames;
-  return ru.find(v => names.some(n => v.name.toLowerCase().includes(n))) || ru[0];
+function stopAudio() {
+  if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+  speechSynthesis.cancel();
 }
 
-function speak(text, genderHint) {
-  speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = 'ru-RU';
-  const v = pickVoice(genderHint);
-  if (v) u.voice = v;
-  u.rate = 0.95;
-  speechSynthesis.speak(u);
+async function speak(text) {
+  stopAudio();
+  setOrb('speaking');
+  setStatus(currentSession ? currentSession.psy.name + ' говорит...' : '');
+  try {
+    const res = await fetch('/api/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ text, psychologist_id: currentSession ? currentSession.psy.id : '' }),
+    });
+    if (!res.ok) throw new Error('tts');
+    const blob = await res.blob();
+    if (!blob.size) throw new Error('tts');
+    await new Promise((resolve) => {
+      currentAudio = new Audio(URL.createObjectURL(blob));
+      currentAudio.onended = resolve;
+      currentAudio.onerror = resolve;
+      currentAudio.play().catch(resolve);
+    });
+  } catch (e) {
+    // Фолбэк: голос браузера
+    await new Promise((resolve) => {
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'ru-RU';
+      u.rate = 0.95;
+      u.onend = resolve;
+      u.onerror = resolve;
+      speechSynthesis.speak(u);
+    });
+  }
+  setOrb('');
+  setStatus('Нажмите на микрофон и говорите');
 }
 
 // ---------------- История сессий ----------------

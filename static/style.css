@@ -131,25 +131,37 @@ label { font-size: .88rem; color: var(--muted); display: block; margin-top: 4px;
   display: flex; justify-content: space-between; align-items: center;
   padding: 14px 22px; background: var(--card); box-shadow: var(--shadow); font-weight: 600;
 }
-.chat { flex: 1; overflow-y: auto; padding: 22px; max-width: 760px; width: 100%; margin: 0 auto; }
-.msg { max-width: 78%; padding: 12px 16px; border-radius: 16px; margin-bottom: 10px; animation: fadeIn .25s; }
-.msg.user { background: var(--accent); color: #fff; margin-left: auto; border-bottom-right-radius: 4px; }
-.msg.ai { background: var(--card); box-shadow: var(--shadow); border-bottom-left-radius: 4px; }
-.msg.typing { color: var(--muted); font-style: italic; background: transparent; box-shadow: none; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; } }
-
-.session-controls {
-  display: flex; gap: 10px; align-items: center;
-  padding: 14px 22px; max-width: 760px; width: 100%; margin: 0 auto;
+/* Голосовая сцена */
+.voice-stage {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 26px;
 }
-.session-controls input { margin: 0; flex: 1; }
+.orb {
+  width: 180px; height: 180px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 4.5rem; background: var(--accent-soft);
+  box-shadow: 0 0 0 0 rgba(91,138,114,.25); transition: all .3s;
+}
+.orb.listening { background: #f3e3df; animation: orbPulse 1.4s infinite; }
+.orb.thinking { animation: orbBreathe 1.6s infinite; opacity: .75; }
+.orb.speaking { animation: orbPulse 1.1s infinite; }
+@keyframes orbPulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(91,138,114,.30); transform: scale(1); }
+  50% { box-shadow: 0 0 0 30px rgba(91,138,114,0); transform: scale(1.04); }
+}
+@keyframes orbBreathe { 0%,100% { transform: scale(1); } 50% { transform: scale(.94); } }
+
+.session-controls { padding: 14px 22px 34px; }
+.session-controls.center { display: flex; justify-content: center; }
 .mic {
   width: 56px; height: 56px; min-width: 56px; border-radius: 50%; border: none;
   font-size: 1.5rem; cursor: pointer; background: var(--accent-soft); transition: all .2s;
 }
+.mic.big-mic { width: 76px; height: 76px; min-width: 76px; font-size: 2rem; box-shadow: var(--shadow); }
+.mic:hover { background: var(--accent); }
 .mic.recording { background: var(--danger); animation: pulse 1.2s infinite; }
 @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(192,97,79,.4);} 50% { box-shadow: 0 0 0 14px rgba(192,97,79,0);} }
-.session-status { text-align: center; color: var(--muted); font-size: .85rem; padding-bottom: 14px; }
+.session-status { text-align: center; color: var(--muted); font-size: .95rem; min-height: 1.4em; }
 
 /* ---- Списки сессий и броней ---- */
 .session-item { cursor: pointer; }

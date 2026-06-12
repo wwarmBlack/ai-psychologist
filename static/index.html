@@ -115,19 +115,19 @@
   </div>
 </div>
 
-<!-- ===== Экран сессии ===== -->
+<!-- ===== Экран сессии (только голос) ===== -->
 <div id="view-session" class="view hidden session-view">
   <div class="session-header">
     <span id="session-psy-name"></span>
     <button class="btn danger small-btn" onclick="endSession()">Завершить сессию</button>
   </div>
-  <div id="chat" class="chat"></div>
-  <div class="session-controls">
-    <button id="mic-btn" class="mic" onclick="toggleMic()">🎤</button>
-    <input id="chat-input" placeholder="Или напишите сообщение..." onkeydown="if(event.key==='Enter')sendText()">
-    <button class="btn primary" onclick="sendText()">➤</button>
+  <div class="voice-stage">
+    <div id="orb" class="orb"><span id="orb-avatar">🌿</span></div>
+    <p id="session-status" class="session-status">Подключение...</p>
   </div>
-  <p id="session-status" class="session-status">Нажмите на микрофон и говорите</p>
+  <div class="session-controls center">
+    <button id="mic-btn" class="mic big-mic" onclick="toggleMic()">🎤</button>
+  </div>
 </div>
 
 <!-- ===== Резюме после сессии ===== -->
