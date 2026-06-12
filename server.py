@@ -385,12 +385,12 @@ def delete_booking(booking_id: int, authorization: str | None = Header(None)):
 # Нейроголоса Microsoft: бесплатно, отличное качество для русского языка.
 # Каждому психологу — свой голос и манера речи (темп/высота).
 TTS_VOICES = {
-    "anna":    {"voice": "ru-RU-SvetlanaNeural", "rate": "-6%",  "pitch": "+0Hz"},
-    "mikhail": {"voice": "ru-RU-DmitryNeural",   "rate": "+8%",  "pitch": "+2Hz"},
-    "sofia":   {"voice": "ru-RU-SvetlanaNeural", "rate": "-2%",  "pitch": "+4Hz"},
-    "viktor":  {"voice": "ru-RU-DmitryNeural",   "rate": "-12%", "pitch": "-4Hz"},
+    "anna":    {"voice": "ru-RU-SvetlanaNeural", "rate": "+9%",  "pitch": "+0Hz"},
+    "mikhail": {"voice": "ru-RU-DmitryNeural",   "rate": "+23%", "pitch": "+2Hz"},
+    "sofia":   {"voice": "ru-RU-SvetlanaNeural", "rate": "+13%", "pitch": "+4Hz"},
+    "viktor":  {"voice": "ru-RU-DmitryNeural",   "rate": "+3%",  "pitch": "-4Hz"},
 }
-DEFAULT_TTS = {"voice": "ru-RU-SvetlanaNeural", "rate": "+0%", "pitch": "+0Hz"}
+DEFAULT_TTS = {"voice": "ru-RU-SvetlanaNeural", "rate": "+15%", "pitch": "+0Hz"}
 
 
 class TTSRequest(BaseModel):
