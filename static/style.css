@@ -1,0 +1,166 @@
+/* ===== Тихая Гавань — минималистичный спокойный дизайн ===== */
+:root {
+  --bg: #f6f4f0;
+  --card: #ffffff;
+  --text: #2d2a26;
+  --muted: #8a8378;
+  --accent: #5b8a72;
+  --accent-dark: #486e5b;
+  --accent-soft: #e3ede7;
+  --danger: #c0614f;
+  --radius: 16px;
+  --shadow: 0 2px 12px rgba(45, 42, 38, .07);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.55;
+}
+
+.hidden { display: none !important; }
+.muted { color: var(--muted); }
+.small { font-size: .85rem; }
+.error { color: var(--danger); min-height: 1.2em; margin-top: 8px; font-size: .9rem; }
+
+h1 { font-weight: 600; font-size: 1.7rem; margin-bottom: 8px; }
+h2 { font-weight: 600; font-size: 1.2rem; margin: 28px 0 14px; }
+h3 { font-weight: 600; font-size: 1.05rem; margin-bottom: 10px; }
+
+.container { max-width: 880px; margin: 0 auto; padding: 28px 20px 60px; }
+.container.narrow { max-width: 560px; }
+
+/* ---- Авторизация ---- */
+#view-auth {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+}
+.auth-card {
+  background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 40px 36px; width: 360px; text-align: center;
+}
+.logo { font-size: 3rem; margin-bottom: 8px; }
+.auth-card h1 { margin-bottom: 4px; }
+.auth-card p { margin-bottom: 22px; }
+
+/* ---- Формы ---- */
+input, textarea, select {
+  width: 100%; padding: 12px 14px; margin: 6px 0 14px;
+  border: 1px solid #e2ddd4; border-radius: 12px;
+  font: inherit; background: #fbfaf8; color: var(--text);
+  transition: border-color .15s;
+}
+input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
+label { font-size: .88rem; color: var(--muted); display: block; margin-top: 4px; }
+
+/* ---- Кнопки ---- */
+.btn {
+  display: inline-block; padding: 12px 22px; border: none; border-radius: 12px;
+  font: inherit; font-weight: 600; cursor: pointer; transition: all .15s;
+}
+.btn.primary { background: var(--accent); color: #fff; }
+.btn.primary:hover { background: var(--accent-dark); }
+.btn.ghost { background: transparent; color: var(--muted); }
+.btn.ghost:hover { color: var(--text); }
+.btn.danger { background: var(--danger); color: #fff; }
+.btn.wide { width: 100%; margin-top: 16px; }
+.btn.big { font-size: 1.15rem; padding: 16px 38px; margin-top: 18px; border-radius: 16px; }
+.small-btn { padding: 8px 16px; font-size: .85rem; }
+.auth-card .btn { width: 100%; margin-top: 8px; }
+
+/* ---- Навигация ---- */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--card); padding: 14px 26px; box-shadow: var(--shadow);
+  position: sticky; top: 0; z-index: 10;
+}
+.brand { font-weight: 700; }
+.nav-links a {
+  margin-left: 20px; cursor: pointer; color: var(--muted);
+  font-weight: 500; padding-bottom: 4px; border-bottom: 2px solid transparent;
+}
+.nav-links a.active { color: var(--accent-dark); border-color: var(--accent); }
+
+/* ---- Карточки ---- */
+.card {
+  background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 24px; margin: 14px 0;
+}
+.hero {
+  background: linear-gradient(135deg, var(--accent-soft), #fff);
+  border-radius: var(--radius); padding: 36px; text-align: center; margin-bottom: 10px;
+}
+
+/* ---- Сетка психологов ---- */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+.psy-card {
+  background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 20px; cursor: pointer; border: 2px solid transparent; transition: all .15s;
+  position: relative;
+}
+.psy-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.psy-card.selected { border-color: var(--accent); background: var(--accent-soft); }
+.psy-avatar { font-size: 2.2rem; }
+.psy-card h3 { margin: 6px 0 2px; }
+.psy-spec { color: var(--accent-dark); font-weight: 600; font-size: .88rem; }
+.psy-desc { font-size: .85rem; color: var(--muted); margin-top: 6px; }
+.psy-fav {
+  margin-top: 10px; font-size: .8rem; color: var(--muted);
+  background: none; border: none; cursor: pointer; padding: 0;
+}
+.psy-fav:hover { color: var(--accent-dark); }
+.fav-badge { position: absolute; top: 12px; right: 14px; font-size: 1.1rem; }
+
+/* ---- Модальные окна ---- */
+.modal {
+  position: fixed; inset: 0; background: rgba(45,42,38,.45);
+  display: flex; align-items: center; justify-content: center; z-index: 50; padding: 20px;
+}
+.modal-box {
+  background: var(--bg); border-radius: 20px; padding: 28px;
+  max-width: 760px; width: 100%; max-height: 88vh; overflow-y: auto;
+}
+.modal-box h2 { margin-bottom: 16px; }
+.summary { white-space: pre-wrap; background: var(--card); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+
+/* ---- Экран сессии ---- */
+.session-view { display: flex; flex-direction: column; height: 100vh; }
+.session-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 22px; background: var(--card); box-shadow: var(--shadow); font-weight: 600;
+}
+.chat { flex: 1; overflow-y: auto; padding: 22px; max-width: 760px; width: 100%; margin: 0 auto; }
+.msg { max-width: 78%; padding: 12px 16px; border-radius: 16px; margin-bottom: 10px; animation: fadeIn .25s; }
+.msg.user { background: var(--accent); color: #fff; margin-left: auto; border-bottom-right-radius: 4px; }
+.msg.ai { background: var(--card); box-shadow: var(--shadow); border-bottom-left-radius: 4px; }
+.msg.typing { color: var(--muted); font-style: italic; background: transparent; box-shadow: none; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; } }
+
+.session-controls {
+  display: flex; gap: 10px; align-items: center;
+  padding: 14px 22px; max-width: 760px; width: 100%; margin: 0 auto;
+}
+.session-controls input { margin: 0; flex: 1; }
+.mic {
+  width: 56px; height: 56px; min-width: 56px; border-radius: 50%; border: none;
+  font-size: 1.5rem; cursor: pointer; background: var(--accent-soft); transition: all .2s;
+}
+.mic.recording { background: var(--danger); animation: pulse 1.2s infinite; }
+@keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(192,97,79,.4);} 50% { box-shadow: 0 0 0 14px rgba(192,97,79,0);} }
+.session-status { text-align: center; color: var(--muted); font-size: .85rem; padding-bottom: 14px; }
+
+/* ---- Списки сессий и броней ---- */
+.session-item { cursor: pointer; }
+.session-item:hover { border-color: var(--accent); }
+.session-item h3 { margin-bottom: 2px; }
+.booking-item { display: flex; justify-content: space-between; align-items: center; }
+
+.balance { font-size: 2rem; font-weight: 700; color: var(--accent-dark); }
+
+@media (max-width: 640px) {
+  .topbar { flex-direction: column; gap: 10px; }
+  .nav-links a { margin: 0 9px; }
+  .msg { max-width: 90%; }
+}

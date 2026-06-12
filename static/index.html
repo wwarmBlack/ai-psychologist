@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Тихая Гавань — ИИ-психолог</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<!-- ===== Авторизация ===== -->
+<div id="view-auth" class="view">
+  <div class="auth-card">
+    <div class="logo">🕊️</div>
+    <h1>Тихая Гавань</h1>
+    <p class="muted">Пространство для разговора с ИИ-психологом</p>
+    <input id="auth-email" type="email" placeholder="Email">
+    <input id="auth-password" type="password" placeholder="Пароль (мин. 6 символов)">
+    <button class="btn primary" onclick="doLogin()">Войти</button>
+    <button class="btn ghost" onclick="doRegister()">Создать аккаунт</button>
+    <p id="auth-error" class="error"></p>
+  </div>
+</div>
+
+<!-- ===== Онбординг ===== -->
+<div id="view-onboarding" class="view hidden">
+  <div class="container narrow">
+    <h1>Давайте познакомимся</h1>
+    <p class="muted">Эти ответы помогут ИИ-психологу лучше вас понять. Их можно изменить в профиле.</p>
+    <div class="card">
+      <label>Как к вам обращаться?</label>
+      <input id="ob-name" placeholder="Имя">
+      <label>Возраст</label>
+      <input id="ob-age" placeholder="Например, 27">
+    </div>
+    <div id="ob-questions"></div>
+    <button class="btn primary wide" onclick="saveOnboarding()">Сохранить и продолжить</button>
+  </div>
+</div>
+
+<!-- ===== Основное приложение ===== -->
+<div id="view-app" class="view hidden">
+  <nav class="topbar">
+    <span class="brand">🕊️ Тихая Гавань</span>
+    <div class="nav-links">
+      <a onclick="showTab('home')" id="tab-home" class="active">Главная</a>
+      <a onclick="showTab('history')" id="tab-history">Сессии</a>
+      <a onclick="showTab('schedule')" id="tab-schedule">Расписание</a>
+      <a onclick="showTab('profile')" id="tab-profile">Профиль</a>
+    </div>
+  </nav>
+
+  <!-- Главная -->
+  <div id="tab-content-home" class="tab container">
+    <div class="hero">
+      <h1>Здравствуйте<span id="home-name"></span> 👋</h1>
+      <p class="muted">Готовы поговорить? Ваш психолог уже ждёт.</p>
+      <div id="home-default-psy"></div>
+      <button class="btn primary big" onclick="openPsyPicker()">Начать сессию</button>
+    </div>
+    <h2>Наши ИИ-психологи</h2>
+    <div id="psy-grid" class="grid"></div>
+  </div>
+
+  <!-- История сессий -->
+  <div id="tab-content-history" class="tab container hidden">
+    <h1>Мои сессии</h1>
+    <div id="history-list"></div>
+  </div>
+
+  <!-- Расписание -->
+  <div id="tab-content-schedule" class="tab container hidden">
+    <h1>Запланировать сессию</h1>
+    <div class="card">
+      <label>Психолог</label>
+      <select id="book-psy"></select>
+      <label>Дата и время</label>
+      <input id="book-slot" type="datetime-local">
+      <button class="btn primary" onclick="createBooking()">Забронировать слот</button>
+      <p class="muted small">🔔 За час до начала придёт уведомление (вкладка с сайтом должна быть открыта; разрешите уведомления в браузере).</p>
+    </div>
+    <h2>Предстоящие сессии</h2>
+    <div id="bookings-list"></div>
+  </div>
+
+  <!-- Профиль -->
+  <div id="tab-content-profile" class="tab container hidden">
+    <h1>Профиль</h1>
+    <div class="card">
+      <h3>О себе</h3>
+      <label>Имя</label><input id="pf-name">
+      <label>Возраст</label><input id="pf-age">
+      <label>Расскажите о себе — это поможет психологу</label>
+      <textarea id="pf-about" rows="3" placeholder="Работа, семья, что вас волнует..."></textarea>
+      <h3>Ответы анкеты</h3>
+      <div id="pf-answers"></div>
+      <button class="btn primary" onclick="saveProfile()">Сохранить</button>
+    </div>
+    <div class="card">
+      <h3>Баланс</h3>
+      <p class="balance" id="pf-balance">—</p>
+      <p class="muted small">Стоимость одной сессии: 100 ₽ (демо-режим, реальные деньги не списываются)</p>
+      <div id="pf-card-block"></div>
+    </div>
+    <button class="btn ghost" onclick="logout()">Выйти из аккаунта</button>
+  </div>
+</div>
+
+<!-- ===== Выбор психолога (модалка) ===== -->
+<div id="modal-psy" class="modal hidden">
+  <div class="modal-box">
+    <h2>С кем хотите поговорить?</h2>
+    <div id="psy-picker" class="grid"></div>
+    <button class="btn ghost" onclick="closeModal('modal-psy')">Отмена</button>
+  </div>
+</div>
+
+<!-- ===== Экран сессии ===== -->
+<div id="view-session" class="view hidden session-view">
+  <div class="session-header">
+    <span id="session-psy-name"></span>
+    <button class="btn danger small-btn" onclick="endSession()">Завершить сессию</button>
+  </div>
+  <div id="chat" class="chat"></div>
+  <div class="session-controls">
+    <button id="mic-btn" class="mic" onclick="toggleMic()">🎤</button>
+    <input id="chat-input" placeholder="Или напишите сообщение..." onkeydown="if(event.key==='Enter')sendText()">
+    <button class="btn primary" onclick="sendText()">➤</button>
+  </div>
+  <p id="session-status" class="session-status">Нажмите на микрофон и говорите</p>
+</div>
+
+<!-- ===== Резюме после сессии ===== -->
+<div id="modal-summary" class="modal hidden">
+  <div class="modal-box">
+    <h2>Резюме сессии</h2>
+    <div id="summary-text" class="summary"></div>
+    <button class="btn primary" onclick="closeSummary()">Хорошо</button>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
